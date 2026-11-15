@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="A hypothetical binary-bet Kelly sizing lab: compare assumed edge, model log growth and shared seeded paths."
+    />
+    <title>edgegrain - Size the stake, not the story</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#lab">Skip to lab</a>
+    <div class="shell">
+      <header>
+        <a href="./" class="brand">edgegrain<span> / 07</span></a
+        ><span>A binary-bet study</span
+        ><a href="#method">Assumptions &amp; method ↓</a>
+      </header>
+      <section class="intro">
+        <p class="eyebrow">Growth is a sizing problem.</p>
+        <h1>Size the stake,<br />not the story.</h1>
+        <p>
+          Kelly maximizes expected log growth in a known model. That is a
+          different goal from maximizing average wealth, avoiding drawdowns or
+          knowing your edge.
+        </p>
+      </section>
+      <main id="lab" tabindex="-1">
+        <form id="controls" novalidate>
+          <div>
+            <label for="assumed">Assumed win chance / %</label
+            ><input
+              id="assumed"
+              type="number"
+              min="10"
+              max="90"
+              step="any"
+              value="60"
+            />
+          </div>
+          <div>
+            <label for="actual">Model win chance / %</label
+            ><input
+              id="actual"
+              type="number"
+              min="10"
+              max="90"
+              step="any"
+              value="55"
+            />
+          </div>
+          <div>
+            <label for="payoff">Net win per unit staked</label
+            ><input
+              id="payoff"
+              type="number"
+              min="0.5"
+              max="3"
+              step="any"
+              value="1"
+            />
+          </div>
+          <div>
+            <label for="stake">Your fixed stake / %</label
+            ><input
+              id="stake"
+              type="number"
+              min="0"
+              max="95"
+              step="any"
+              value="30"
+            />
+          </div>
+          <div>
+            <label for="bets">Trials per path</label
+            ><select id="bets">
+              <option>50</option>
+              <option selected>100</option>
+              <option>200</option>
+            </select>
+          </div>
+          <div>
+            <label for="seed">Seed / whole number</label
+            ><input
+              id="seed"
+              type="number"
+              min="1"
+              max="4294967295"
+              step="1"
+              value="2026"
+            />
+          </div>
+          <button type="submit">Apply &amp; simulate ↗</button>
+          <p id="status" role="status" aria-live="polite"></p>
+          <p class="bounds">
+            Chances 10-90%. Net payoff 0.5-3. Stake 0-95%. Seed 1-4,294,967,295.
+            A loss forfeits the stake; a win returns the stake plus the net
+            payoff. Everything is hypothetical.
+          </p>
+        </form>
+        <section class="growth-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">01 / The model's growth curve</p>
+              <h2>An edge can be overbet.</h2>
+            </div>
+            <p id="edge-note"></p>
+          </div>
+          <p class="growth-key">
+            <span class="half">● Half assumed Kelly</span> ·
+            <span class="full">● Full assumed Kelly</span> ·
+            <span class="custom">● Your stake</span>
+          </p>
+          <div class="growth-grid">
+            <div>
+              <svg
+                id="growth-chart"
+                role="img"
+                aria-labelledby="growth-title growth-desc"
+                viewBox="0 0 760 300"
+              >
+                <title id="growth-title">
+                  Expected log growth by fixed stake
+                </title>
+                <desc id="growth-desc"></desc>
+                <g id="growth-drawing"></g>
+              </svg>
+              <p class="chart-caption">
+                Stake as a fraction of current wealth. The curve uses the model
+                chance, not the assumed chance.
+              </p>
+            </div>
+            <div class="metrics">
+              <div>
+                <p>Kelly from assumed chance</p>
+                <strong id="assumed-kelly"></strong
+                ><span>The full-Kelly comparison stake</span>
+              </div>
+              <div>
+                <p>Kelly from model chance</p>
+                <strong id="actual-kelly"></strong
+                ><span>The curve's optimum, including zero stake</span>
+              </div>
+              <div>
+                <p>Your model log growth</p>
+                <strong id="your-growth"></strong
+                ><span>Natural-log units per trial, not a return forecast</span>
+              </div>
+            </div>
+          </div>
+          <p id="mismatch" class="callout"></p>
+        </section>
+        <div class="legend">
+          <span class="half">━ Half assumed Kelly</span
+          ><span class="full">━ Full assumed Kelly</span
+          ><span class="custom">┄ Your fixed stake</span>
+        </div>
+        <section class="path-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">02 / The same outcomes, different stakes</p>
+              <h2>One path is not the distribution.</h2>
+            </div>
+            <p>
+              Path 1 of 128 seeded paths<br />Start = 1 unit. No deposits or
+              borrowing.
+            </p>
+          </div>
+          <svg
+            id="path-chart"
+            role="img"
+            aria-labelledby="path-title path-desc"
+            viewBox="0 0 1100 310"
+          >
+            <title id="path-title">Shared first simulated path</title>
+            <desc id="path-desc"></desc>
+            <g id="path-drawing"></g>
+          </svg>
+          <p class="chart-caption">
+            Vertical axis is log10(wealth / initial wealth): 0 = 1×, 1 = 10×, -1
+            = 0.1×. Equal vertical distances are equal wealth ratios. Paths
+            never change the analytical growth curve.
+          </p>
+        </section>
+        <p class="scroll-hint">
+          On narrow screens, scroll the comparison table sideways.
+        </p>
+        <div
+          class="table-scroll"
+          tabindex="0"
+          role="region"
+          aria-label="Strategy comparison, scroll horizontally on small screens"
+        >
+          <table>
+            <caption>
+              Finite horizon, distinct questions
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">At the applied horizon</th>
+                <th scope="col" class="half">Half assumed Kelly</th>
+                <th scope="col" class="full">Full assumed Kelly</th>
+                <th scope="col" class="custom">Your stake</th>
+              </tr>
+            </thead>
+            <tbody id="results"></tbody>
+          </table>
+        </div>
+        <p class="table-note">
+          Mean, median and below-start probability are calculated from the
+          independent binary model, not estimated from 128 paths. The drawdown
+          row is a simulation frequency, not an exact probability or a future
+          risk estimate. Drawdown is measured from a running peak, not just from
+          the start.
+        </p>
+        <p class="table-note">
+          Rounded 100% probabilities or drawdowns do not necessarily mean
+          certainty or zero wealth.
+        </p>
+        <section id="method" class="method">
+          <div>
+            <p class="eyebrow">Read before interpreting</p>
+            <h2>The chance is an<br />assumption, not a fact.</h2>
+            <p>
+              No real bets, accounts or market data. This toy model is not a
+              portfolio allocation, betting recommendation or investment
+              forecast.
+            </p>
+          </div>
+          <div>
+            <article>
+              <span>01</span>
+              <div>
+                <h3>Known odds, repeated stakes</h3>
+                <p>
+                  A trial wins with the model chance and loses otherwise. Net
+                  payoff b means a winning unit earns b units of profit. Each
+                  strategy stakes a fixed share f of its current wealth. The
+                  rest stays idle. Assumed chance chooses the two Kelly stakes;
+                  model chance drives the curve and every simulated outcome.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span>02</span>
+              <div>
+                <h3>Log growth is not average wealth</h3>
+                <p>
+                  g(f) = p ln(1 + bf) + (1 - p) ln(1 - f). With no borrowing or
+                  short bets, f* = max(0, (pb - (1 - p))/b). The horizon does
+                  not enter that formula. A high arithmetic mean can be driven
+                  by rare large outcomes. Log-optimal does not mean low drawdown
+                  or best on every path.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span>03</span>
+              <div>
+                <h3>Fractional is not a safety label</h3>
+                <p>
+                  Half Kelly cuts the assumed full-Kelly stake in half. Neither
+                  one knows whether the assumed chance is right. An
+                  overestimated edge can turn expected log growth negative. Even
+                  a correctly specified Kelly stake can suffer large drawdowns.
+                </p>
+              </div>
+            </article>
+            <details>
+              <summary>Simulation and numerical choices</summary>
+              <p>
+                128 paths share the same seeded xorshift32 outcomes across all
+                three stakes. One uniform draw per trial, win if draw &lt; model
+                chance. Pseudo-random outcomes approximate an independent binary
+                model; the finite generator is not a statistical guarantee or
+                cryptographic randomness. The first path is shown, not selected
+                for its result.
+              </p>
+              <p>
+                Wealth calculations use log space. Terminal wealth depends only
+                on win count; analytical probabilities sum a binomial
+                distribution. A finish within 1e-12 natural-log units of the
+                start counts as neither below nor above it. Median uses the
+                first win count reaching cumulative probability 0.5. No costs,
+                minimum stakes, rounding, changing probabilities, correlations,
+                taxes, limits or liquidity. The stake cap 95% excludes all-in
+                ruin and leverage; it does not make the model safe.
+              </p>
+            </details>
+            <p class="sources">
+              Sources:
+              <a
+                href="http://stat.wharton.upenn.edu/~steele/Resources/FTSResources/KellyBreiman/Kelly56.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Kelly (1956)</a
+              >
+              ·
+              <a
+                href="https://stanford.edu/~boyd/papers/pdf/kelly.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Risk-constrained Kelly</a
+              >
+              ·
+              <a
+                href="https://arxiv.org/html/1710.01787v1"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Some limitations</a
+              >
+              ·
+              <a
+                href="https://itl.nist.gov/div898/handbook/eda/section3/eda366i.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                >NIST binomial model</a
+              >.
+            </p>
+          </div>
+        </section>
+      </main>
+      <footer>
+        <span>edgegrain / Java reference + local browser lab</span
+        ><span>No uploads, tracking or saved assumptions.</span>
+      </footer>
+    </div>
+    <noscript
+      >JavaScript is needed for local simulation. The method and Java source
+      remain available in the repository.</noscript
+    >
+  </body>
+</html>
