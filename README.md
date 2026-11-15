@@ -1,5 +1,7 @@
 # edgegrain
 
+[Open the live lab](https://aditya2375.github.io/edgegrain/)
+
 A Java-first Kelly sizing lab for a hypothetical repeated binary bet. Change an assumed win chance, a separate model win chance and net payoff. Compare half assumed Kelly, full assumed Kelly and a custom fixed stake on shared seeded paths.
 
 ## What it does
